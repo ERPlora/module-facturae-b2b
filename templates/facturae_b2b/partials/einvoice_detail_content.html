@@ -1,0 +1,282 @@
+{% load djicons i18n %}
+
+{% if einvoice %}
+{% url 'facturae_b2b:einvoice_sign' einvoice.pk as sign_url %}
+{% url 'facturae_b2b:einvoice_detail' einvoice.pk as detail_url %}
+{% url 'facturae_b2b:einvoice_regenerate' einvoice.pk as regen_url %}
+{% url 'facturae_b2b:einvoice_delete' einvoice.pk as delete_url %}
+{% url 'facturae_b2b:einvoices' as list_url %}
+{% endif %}
+
+<div hidden data-back-url="{{ list_url }}"></div>
+
+<div class="p-4" x-data="{
+    signing: false,
+    regenerating: false,
+    deleting: false,
+    csrfToken: '{{ csrf_token }}',
+    signEInvoice() {
+        if (!confirm('{% trans 'Sign this e-invoice?' %}')) return;
+        this.signing = true;
+        fetch('{{ sign_url }}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': this.csrfToken}
+        }).then(r => r.json()).then(d => {
+            this.signing = false;
+            if (d.ok) {
+                htmx.ajax('GET', '{{ detail_url }}', '#main-content-area');
+            } else {
+                alert(d.error || 'Signing failed');
+            }
+        }).catch(() => { this.signing = false; alert('Signing failed'); });
+    },
+    regenerateEInvoice() {
+        if (!confirm('{% trans 'Regenerate XML? Current XML will be overwritten.' %}')) return;
+        this.regenerating = true;
+        fetch('{{ regen_url }}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': this.csrfToken}
+        }).then(r => r.json()).then(d => {
+            this.regenerating = false;
+            if (d.ok) {
+                htmx.ajax('GET', '{{ detail_url }}', '#main-content-area');
+            } else {
+                alert(d.error || 'Regeneration failed');
+            }
+        }).catch(() => { this.regenerating = false; alert('Regeneration failed'); });
+    },
+    deleteEInvoice() {
+        if (!confirm('{% trans 'Delete this e-invoice?' %}')) return;
+        this.deleting = true;
+        fetch('{{ delete_url }}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': this.csrfToken}
+        }).then(r => r.json()).then(d => {
+            this.deleting = false;
+            if (d.ok) {
+                htmx.ajax('GET', '{{ list_url }}', '#main-content-area');
+            } else {
+                alert(d.error || 'Deletion failed');
+            }
+        }).catch(() => { this.deleting = false; alert('Deletion failed'); });
+    }
+}">
+    {% if error %}
+    <div class="callout color-error mb-4">
+        <div class="callout-icon">{% icon "alert-circle-outline" %}</div>
+        <div class="callout-content">
+            <div class="callout-title">{% trans "Error" %}</div>
+            <div class="callout-text">{{ error }}</div>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
+            <h2 class="text-xl font-semibold">{{ einvoice.ubl_invoice_id }}</h2>
+            <span class="badge {% if einvoice.status == 'generated' %}color-primary{% elif einvoice.status == 'signed' %}color-success{% elif einvoice.status == 'sent' %}color-warning{% elif einvoice.status == 'accepted' %}color-success{% elif einvoice.status == 'rejected' or einvoice.status == 'error' %}color-error{% endif %}">
+                {{ einvoice.get_status_display }}
+            </span>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if einvoice.status == 'generated' and has_certificate %}
+            <button class="btn color-success btn-sm"
+                    :disabled="signing"
+                    @click="signEInvoice">
+                <template x-if="signing"><span class="loading loading-sm"></span></template>
+                <template x-if="!signing">{% icon "shield-checkmark-outline" %}</template>
+                {% trans "Sign" %}
+            </button>
+            {% endif %}
+
+            <a href="{% url 'facturae_b2b:einvoice_download' einvoice.pk %}"
+               class="btn btn-outline btn-sm">
+                {% icon "download-outline" %} {% trans "Download XML" %}
+            </a>
+
+            {% if einvoice.signed_xml_file %}
+            <a href="{% url 'facturae_b2b:einvoice_download_signed' einvoice.pk %}"
+               class="btn btn-outline btn-sm color-success">
+                {% icon "download-outline" %} {% trans "Download Signed" %}
+            </a>
+            {% endif %}
+
+            {% if einvoice.status != 'sent' and einvoice.status != 'accepted' %}
+            <button class="btn btn-ghost btn-sm"
+                    :disabled="regenerating"
+                    @click="regenerateEInvoice">
+                <template x-if="regenerating"><span class="loading loading-sm"></span></template>
+                <template x-if="!regenerating">{% icon "refresh-outline" %}</template>
+                {% trans "Regenerate" %}
+            </button>
+
+            <button class="btn btn-ghost btn-sm color-error"
+                    :disabled="deleting"
+                    @click="deleteEInvoice">
+                {% icon "trash-outline" %} {% trans "Delete" %}
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if einvoice.error_message %}
+    <div class="callout color-error mb-4">
+        <div class="callout-icon">{% icon "alert-circle-outline" %}</div>
+        <div class="callout-content">
+            <div class="callout-title">{% trans "Error" %}</div>
+            <div class="callout-text">{{ einvoice.error_message }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <!-- Invoice Info -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{% icon "document-text-outline" css_class="text-primary" %} {% trans "Invoice" %}</h3>
+            </div>
+            <div class="list">
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Number" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span class="font-medium">{{ einvoice.invoice.number }}</span>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Customer" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span>{{ einvoice.invoice.customer_name }}</span>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Issue Date" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span>{{ einvoice.invoice.issue_date|date:"d/m/Y" }}</span>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Total" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span class="font-semibold">{{ einvoice.invoice.total_amount }} &euro;</span>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Status" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span class="badge badge-sm">{{ einvoice.invoice.get_status_display }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- E-Invoice Info -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{% icon "code-slash-outline" css_class="text-primary" %} {% trans "E-Invoice" %}</h3>
+            </div>
+            <div class="list">
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "UBL ID" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span class="font-mono text-sm">{{ einvoice.ubl_invoice_id }}</span>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Created" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span class="text-sm">{{ einvoice.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+                {% if einvoice.signature_timestamp %}
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Signed" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span class="text-sm">{{ einvoice.signature_timestamp|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if einvoice.sent_at %}
+                <div class="list-item">
+                    <div class="list-item-content">
+                        <div class="list-item-label">{% trans "Sent" %}</div>
+                    </div>
+                    <div class="list-item-end">
+                        <span class="text-sm">{{ einvoice.sent_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{% icon "time-outline" css_class="text-primary" %} {% trans "Activity" %}</h3>
+            </div>
+            <div class="card-body p-0">
+                {% if logs %}
+                <div class="list">
+                    {% for log in logs %}
+                    <div class="list-item list-item-multiline">
+                        <div class="list-item-start">
+                            {% if log.action == 'generated' %}{% icon "code-slash-outline" css_class="text-primary" %}
+                            {% elif log.action == 'signed' %}{% icon "shield-checkmark-outline" css_class="text-success" %}
+                            {% elif log.action == 'sent' %}{% icon "send-outline" css_class="text-warning" %}
+                            {% elif log.action == 'accepted' %}{% icon "checkmark-circle-outline" css_class="text-success" %}
+                            {% elif log.action == 'rejected' %}{% icon "close-circle-outline" css_class="text-error" %}
+                            {% elif log.action == 'error' %}{% icon "alert-circle-outline" css_class="text-error" %}
+                            {% elif log.action == 'downloaded' %}{% icon "download-outline" css_class="text-base-content/60" %}
+                            {% elif log.action == 'regenerated' %}{% icon "refresh-outline" css_class="text-warning" %}
+                            {% endif %}
+                        </div>
+                        <div class="list-item-content">
+                            <div class="list-item-label">{{ log.get_action_display }}</div>
+                            {% if log.details %}
+                            <div class="list-item-note">{{ log.details|truncatewords:20 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="list-item-end">
+                            <span class="text-xs text-muted">{{ log.created_at|date:"d/m H:i" }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-6 text-muted text-sm">{% trans "No activity yet" %}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- XML Preview -->
+    <div class="card">
+        <div class="card-header">
+            <div class="flex justify-between items-center">
+                <h3 class="card-title">{% icon "code-outline" css_class="text-primary" %} {% trans "XML Preview" %}</h3>
+                <span class="text-xs text-muted">UBL 2.1 / EN 16931</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <pre class="text-xs overflow-x-auto p-4 bg-base-200 rounded-b-xl" style="max-height: 500px;">{{ einvoice.xml_content }}</pre>
+        </div>
+    </div>
+
+    {% endif %}
+</div>

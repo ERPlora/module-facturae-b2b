@@ -1,0 +1,234 @@
+{% load djicons i18n %}
+
+{% if einvoices %}
+
+{% if current_view == 'cards' %}
+<!-- Card View -->
+<div class="datatable-body">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        {% for ei in einvoices %}
+        <div class="card glass cursor-pointer"
+             hx-get="{% url 'facturae_b2b:einvoice_detail' ei.pk %}"
+             hx-target="#main-content-area"
+             hx-push-url="true">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold">{{ ei.invoice.number }}</span>
+                    <span class="badge badge-sm {% if ei.status == 'generated' %}color-primary{% elif ei.status == 'signed' %}color-success{% elif ei.status == 'sent' %}color-warning{% elif ei.status == 'accepted' %}color-success{% elif ei.status == 'rejected' or ei.status == 'error' %}color-error{% endif %}">
+                        {{ ei.get_status_display }}
+                    </span>
+                </div>
+                <div class="text-sm text-base-content/60 mb-1">{{ ei.invoice.customer_name }}</div>
+                <div class="flex items-center justify-between text-xs text-base-content/40">
+                    <span class="font-mono">{{ ei.ubl_invoice_id }}</span>
+                    <span>{{ ei.created_at|date:"d/m/Y" }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<!-- Table View (default) -->
+<div class="datatable-body">
+    <table class="datatable-table">
+        <thead class="datatable-thead">
+            <tr>
+                <th class="datatable-th datatable-th-checkbox">
+                    <label class="checkbox checkbox-sm">
+                        <input type="checkbox"
+                               :checked="selectAll"
+                               @click="toggleAll([{% for ei in einvoices %}'{{ ei.pk }}'{% if not forloop.last %},{% endif %}{% endfor %}])">
+                        <span class="checkbox-mark"></span>
+                    </label>
+                </th>
+                <th class="datatable-th datatable-th-sortable{% if sort_field == 'invoice' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                    hx-get="{% url 'facturae_b2b:einvoices' %}?sort=invoice&dir={% if sort_field == 'invoice' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
+                    hx-target="#datatable-body"
+                    hx-include="#einvoices-datatable"
+                    style="cursor: pointer;">
+                    {% trans "Invoice" %}
+                    <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
+                </th>
+                <th class="datatable-th datatable-th-sortable{% if sort_field == 'customer' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                    hx-get="{% url 'facturae_b2b:einvoices' %}?sort=customer&dir={% if sort_field == 'customer' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
+                    hx-target="#datatable-body"
+                    hx-include="#einvoices-datatable"
+                    style="cursor: pointer;">
+                    {% trans "Customer" %}
+                    <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
+                </th>
+                <th class="datatable-th">{% trans "UBL ID" %}</th>
+                <th class="datatable-th datatable-th-sortable{% if sort_field == 'status' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                    hx-get="{% url 'facturae_b2b:einvoices' %}?sort=status&dir={% if sort_field == 'status' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
+                    hx-target="#datatable-body"
+                    hx-include="#einvoices-datatable"
+                    style="cursor: pointer;">
+                    {% trans "Status" %}
+                    <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
+                </th>
+                <th class="datatable-th datatable-th-sortable{% if sort_field == 'created' %} datatable-th-sorted{% if sort_dir == 'desc' %} datatable-th-sorted-desc{% endif %}{% endif %}"
+                    hx-get="{% url 'facturae_b2b:einvoices' %}?sort=created&dir={% if sort_field == 'created' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
+                    hx-target="#datatable-body"
+                    hx-include="#einvoices-datatable"
+                    style="cursor: pointer;">
+                    {% trans "Date" %}
+                    <span class="datatable-sort-icon">{% icon "chevron-up-outline" %}</span>
+                </th>
+                <th class="datatable-th datatable-th-actions">{% trans "Actions" %}</th>
+            </tr>
+        </thead>
+        <tbody class="datatable-tbody">
+            {% for ei in einvoices %}
+            <tr class="datatable-tr"
+                data-id="{{ ei.pk }}"
+                :class="{ 'datatable-tr-selected': selectedIds.includes('{{ ei.pk }}') }">
+                <td class="datatable-td datatable-td-checkbox" onclick="event.stopPropagation();">
+                    <label class="checkbox checkbox-sm">
+                        <input type="checkbox"
+                               :checked="selectedIds.includes('{{ ei.pk }}')"
+                               @click="toggleSelect('{{ ei.pk }}')">
+                        <span class="checkbox-mark"></span>
+                    </label>
+                </td>
+                <td class="datatable-td" data-label="{% trans 'Invoice' %}">
+                    <span class="font-medium cursor-pointer"
+                          hx-get="{% url 'facturae_b2b:einvoice_detail' ei.pk %}"
+                          hx-target="#main-content-area"
+                          hx-push-url="true">
+                        {{ ei.invoice.number }}
+                    </span>
+                </td>
+                <td class="datatable-td" data-label="{% trans 'Customer' %}">
+                    <span class="text-base-content/60">{{ ei.invoice.customer_name }}</span>
+                </td>
+                <td class="datatable-td" data-label="{% trans 'UBL ID' %}">
+                    <span class="font-mono text-sm text-base-content/60">{{ ei.ubl_invoice_id }}</span>
+                </td>
+                <td class="datatable-td" data-label="{% trans 'Status' %}">
+                    <span class="badge badge-sm {% if ei.status == 'generated' %}color-primary{% elif ei.status == 'signed' %}color-success{% elif ei.status == 'sent' %}color-warning{% elif ei.status == 'accepted' %}color-success{% elif ei.status == 'rejected' or ei.status == 'error' %}color-error{% endif %}">
+                        {{ ei.get_status_display }}
+                    </span>
+                </td>
+                <td class="datatable-td" data-label="{% trans 'Date' %}">
+                    <span class="text-sm text-base-content/60">{{ ei.created_at|date:"d/m/Y" }}</span>
+                </td>
+                <td class="datatable-td datatable-td-actions" onclick="event.stopPropagation();">
+                    <div class="datatable-row-actions">
+                        <button class="datatable-row-action"
+                                hx-get="{% url 'facturae_b2b:einvoice_detail' ei.pk %}"
+                                hx-target="#main-content-area"
+                                hx-push-url="true"
+                                title="{% trans 'View' %}">
+                            {% icon "eye-outline" %}
+                        </button>
+                        <a class="datatable-row-action"
+                           href="{% url 'facturae_b2b:einvoice_download' ei.pk %}"
+                           title="{% trans 'Download XML' %}">
+                            {% icon "download-outline" %}
+                        </a>
+                        {% if ei.status != 'sent' and ei.status != 'accepted' %}
+                        <button class="datatable-row-action datatable-row-action-danger"
+                                @click="deleteTarget = { id: '{{ ei.pk }}', name: '{{ ei.ubl_invoice_id }}', url: '{% url 'facturae_b2b:einvoice_delete' ei.pk %}' }; deleteConfirm = true"
+                                title="{% trans 'Delete' %}">
+                            {% icon "trash-outline" %}
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Footer / Pagination -->
+<div class="datatable-footer">
+    <div class="datatable-per-page">
+        {% trans "Show" %}
+        <select name="per_page"
+                hx-get="{% url 'facturae_b2b:einvoices' %}"
+                hx-target="#datatable-body"
+                hx-include="#einvoices-datatable"
+                hx-trigger="change">
+            <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+        {% trans "per page" %}
+    </div>
+
+    <span class="datatable-info">
+        {% if page_obj.paginator.count > 0 %}
+        {% blocktrans with start=page_obj.start_index end=page_obj.end_index total=page_obj.paginator.count %}Showing {{ start }}-{{ end }} of {{ total }} e-invoices{% endblocktrans %}
+        {% endif %}
+    </span>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination pagination-sm">
+        <button class="pagination-btn pagination-prev"
+                {% if page_obj.has_previous %}
+                hx-get="{% url 'facturae_b2b:einvoices' %}?page={{ page_obj.previous_page_number }}"
+                hx-target="#datatable-body"
+                hx-include="#einvoices-datatable"
+                {% else %}disabled{% endif %}>
+            {% icon "chevron-back-outline" %}
+        </button>
+        {% for num in page_obj.paginator.page_range %}
+        <button class="pagination-btn{% if num == page_obj.number %} pagination-active{% endif %}"
+                hx-get="{% url 'facturae_b2b:einvoices' %}?page={{ num }}"
+                hx-target="#datatable-body"
+                hx-include="#einvoices-datatable">
+            {{ num }}
+        </button>
+        {% endfor %}
+        <button class="pagination-btn pagination-next"
+                {% if page_obj.has_next %}
+                hx-get="{% url 'facturae_b2b:einvoices' %}?page={{ page_obj.next_page_number }}"
+                hx-target="#datatable-body"
+                hx-include="#einvoices-datatable"
+                {% else %}disabled{% endif %}>
+            {% icon "chevron-forward-outline" %}
+        </button>
+    </nav>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="datatable-empty">
+    <div class="datatable-empty-icon">
+        {% if search or status_filter %}
+        {% icon "search-outline" %}
+        {% else %}
+        {% icon "code-slash-outline" %}
+        {% endif %}
+    </div>
+    <div class="datatable-empty-title">
+        {% if search or status_filter %}
+        {% trans "No e-invoices found" %}
+        {% else %}
+        {% trans "No e-invoices yet" %}
+        {% endif %}
+    </div>
+    <div class="datatable-empty-text">
+        {% if search or status_filter %}
+        {% trans "Try a different search term or filter" %}
+        {% else %}
+        {% trans "Generate your first e-invoice from an existing invoice" %}
+        {% endif %}
+    </div>
+    {% if not search and not status_filter %}
+    <a class="btn color-primary mt-4"
+       hx-get="{% url 'facturae_b2b:generate_select' %}"
+       hx-target="#main-content-area"
+       hx-push-url="true">
+        {% icon "add-outline" %}
+        {% trans "Generate E-Invoice" %}
+    </a>
+    {% endif %}
+</div>
+{% endif %}

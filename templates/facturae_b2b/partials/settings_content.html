@@ -1,0 +1,328 @@
+{% load djicons i18n %}
+
+{% url 'facturae_b2b:settings_certificate_upload' as upload_url %}
+{% url 'facturae_b2b:settings_certificate_remove' as remove_url %}
+{% url 'facturae_b2b:settings' as settings_url %}
+
+<div class="p-4" x-data="{
+    uploading: false,
+    removing: false,
+    csrfToken: '{{ csrf_token }}',
+    uploadCertificate() {
+        this.uploading = true;
+        const form = document.getElementById('cert-form');
+        const formData = new FormData(form);
+        fetch('{{ upload_url }}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': this.csrfToken},
+            body: formData
+        }).then(r => r.json()).then(d => {
+            this.uploading = false;
+            if (d.ok) {
+                htmx.ajax('GET', '{{ settings_url }}', '#main-content-area');
+            } else {
+                alert(d.error || JSON.stringify(d.errors) || 'Upload failed');
+            }
+        }).catch(() => { this.uploading = false; alert('Upload failed'); });
+    },
+    removeCertificate() {
+        if (!confirm('{% trans 'Remove the digital certificate?' %}')) return;
+        this.removing = true;
+        fetch('{{ remove_url }}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': this.csrfToken}
+        }).then(r => r.json()).then(d => {
+            this.removing = false;
+            if (d.ok) {
+                htmx.ajax('GET', '{{ settings_url }}', '#main-content-area');
+            } else {
+                alert(d.error || 'Remove failed');
+            }
+        }).catch(() => { this.removing = false; alert('Remove failed'); });
+    }
+}">
+    <!-- Company Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% icon "business-outline" css_class="text-primary" %} {% trans "Company Information" %}</h3>
+            <p class="text-sm text-base-content/60">{% trans "Issuer data for UBL e-invoices (BG-4 Seller)" %}</p>
+        </div>
+        <div class="list">
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Company Name" %}</div>
+                    <div class="list-item-note">{% trans "Legal business name" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="company_name"
+                           value="{{ settings.company_name }}"
+                           class="input input-sm"
+                           style="width: 220px;"
+                           placeholder="{% trans 'Your Company Name' %}"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "company_name", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Tax ID (NIF/CIF)" %}</div>
+                    <div class="list-item-note">{% trans "Company tax identification" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="tax_id"
+                           value="{{ settings.tax_id }}"
+                           class="input input-sm"
+                           style="width: 180px;"
+                           placeholder="B12345678"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "tax_id", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Street" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="address_street"
+                           value="{{ settings.address_street }}"
+                           class="input input-sm"
+                           style="width: 280px;"
+                           placeholder="{% trans 'Street address' %}"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "address_street", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "City" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="address_city"
+                           value="{{ settings.address_city }}"
+                           class="input input-sm"
+                           style="width: 180px;"
+                           placeholder="{% trans 'City' %}"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "address_city", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Postal Code" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="address_postal_code"
+                           value="{{ settings.address_postal_code }}"
+                           class="input input-sm"
+                           style="width: 120px;"
+                           placeholder="28001"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "address_postal_code", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Province" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="address_province"
+                           value="{{ settings.address_province }}"
+                           class="input input-sm"
+                           style="width: 180px;"
+                           placeholder="{% trans 'Province' %}"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "address_province", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Country Code" %}</div>
+                    <div class="list-item-note">{% trans "ISO 3166-1 alpha-2" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="country_code"
+                           value="{{ settings.country_code }}"
+                           class="input input-sm"
+                           style="width: 80px; text-transform: uppercase;"
+                           maxlength="2"
+                           placeholder="ES"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "country_code", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Digital Certificate -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% icon "key-outline" css_class="text-warning" %} {% trans "Digital Certificate" %}</h3>
+            <p class="text-sm text-base-content/60">{% trans "PKCS#12 (.p12) certificate for XAdES digital signature (optional)" %}</p>
+        </div>
+        <div class="card-body">
+            {% if settings.has_certificate %}
+            <!-- Current certificate info -->
+            <div class="flex items-center gap-4 p-4 rounded-xl bg-base-200 mb-4">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center {% if settings.certificate_valid %}bg-success/10{% else %}bg-warning/10{% endif %}">
+                    {% icon "shield-checkmark-outline" css_class="text-xl {% if settings.certificate_valid %}text-success{% else %}text-warning{% endif %}" %}
+                </div>
+                <div class="flex-1">
+                    <div class="font-medium text-sm">{{ settings.certificate_subject }}</div>
+                    <div class="text-xs text-muted">
+                        {% trans "Expires" %}: {{ settings.certificate_expiry|date:"d/m/Y H:i" }}
+                        {% if settings.certificate_valid %}
+                        <span class="badge badge-sm color-success ml-1">{% trans "Valid" %}</span>
+                        {% else %}
+                        <span class="badge badge-sm color-warning ml-1">{% trans "Expired" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm color-error"
+                        :disabled="removing"
+                        @click="removeCertificate">
+                    <template x-if="removing"><span class="loading loading-sm"></span></template>
+                    <template x-if="!removing">{% icon "trash-outline" %}</template>
+                    {% trans "Remove" %}
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- Upload form -->
+            <form id="cert-form" enctype="multipart/form-data"
+                  @submit.prevent="uploadCertificate">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="form-group flex-1" style="min-width: 200px;">
+                        <label class="form-group-label">{% trans "Certificate file (.p12)" %}</label>
+                        <input type="file" name="certificate" accept=".p12,.pfx"
+                               class="input input-sm" required>
+                    </div>
+                    <div class="form-group" style="min-width: 180px;">
+                        <label class="form-group-label">{% trans "Password" %}</label>
+                        <input type="password" name="password"
+                               class="input input-sm"
+                               placeholder="{% trans 'Certificate password' %}" required>
+                    </div>
+                    <button type="submit" class="btn color-primary btn-sm"
+                            :disabled="uploading">
+                        <template x-if="uploading"><span class="loading loading-sm"></span></template>
+                        <template x-if="!uploading">{% icon "cloud-upload-outline" %}</template>
+                        {% trans "Upload" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Behavior -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% icon "settings-outline" css_class="text-success" %} {% trans "Behavior" %}</h3>
+        </div>
+        <div class="list">
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Auto-generate E-Invoice" %}</div>
+                    <div class="list-item-note">{% trans "Automatically generate UBL XML when an invoice is issued" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle color-success">
+                        <input type="checkbox" name="auto_generate"
+                               {% if settings.auto_generate %}checked{% endif %}
+                               hx-post="{% url 'facturae_b2b:settings_toggle' %}"
+                               hx-vals='js:{field: "auto_generate"}'
+                               hx-swap="none">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Auto-sign E-Invoice" %}</div>
+                    <div class="list-item-note">{% trans "Automatically sign with certificate after generation" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <label class="toggle color-success">
+                        <input type="checkbox" name="auto_sign"
+                               {% if settings.auto_sign %}checked{% endif %}
+                               hx-post="{% url 'facturae_b2b:settings_toggle' %}"
+                               hx-vals='js:{field: "auto_sign"}'
+                               hx-swap="none">
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">{% icon "construct-outline" css_class="text-base-content/60" %} {% trans "Advanced" %}</h3>
+            <p class="text-sm text-base-content/60">{% trans "UBL customization and profile identifiers" %}</p>
+        </div>
+        <div class="list">
+            <div class="list-item list-item-multiline">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Customization ID" %}</div>
+                    <div class="list-item-note">{% trans "UBL CustomizationID (PEPPOL BIS 3.0 by default)" %}</div>
+                </div>
+                <div class="list-item-end" style="min-width: 320px;">
+                    <input type="text" name="customization_id"
+                           value="{{ settings.customization_id }}"
+                           class="input input-sm w-full"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "customization_id", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item list-item-multiline">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Profile ID" %}</div>
+                    <div class="list-item-note">{% trans "UBL ProfileID" %}</div>
+                </div>
+                <div class="list-item-end" style="min-width: 320px;">
+                    <input type="text" name="profile_id"
+                           value="{{ settings.profile_id }}"
+                           class="input input-sm w-full"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "profile_id", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <div class="list-item-label">{% trans "Currency Code" %}</div>
+                    <div class="list-item-note">{% trans "ISO 4217 (e.g. EUR, USD)" %}</div>
+                </div>
+                <div class="list-item-end">
+                    <input type="text" name="currency_code"
+                           value="{{ settings.currency_code }}"
+                           class="input input-sm"
+                           style="width: 80px; text-transform: uppercase;"
+                           maxlength="3"
+                           placeholder="EUR"
+                           hx-post="{% url 'facturae_b2b:settings_input' %}"
+                           hx-vals='js:{field: "currency_code", value: event.target.value}'
+                           hx-trigger="change"
+                           hx-swap="none">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

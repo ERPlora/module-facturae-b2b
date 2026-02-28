@@ -1,0 +1,161 @@
+{% load djicons i18n %}
+
+<div class="p-4">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                        {% icon "code-slash-outline" css_class="text-xl text-primary" %}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{% trans "Generated" %}</div>
+                        <div class="text-2xl font-semibold">{{ generated_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
+                        {% icon "shield-checkmark-outline" css_class="text-xl text-success" %}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{% trans "Signed" %}</div>
+                        <div class="text-2xl font-semibold">{{ signed_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-warning/10 rounded-xl flex items-center justify-center">
+                        {% icon "send-outline" css_class="text-xl text-warning" %}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{% trans "Sent" %}</div>
+                        <div class="text-2xl font-semibold">{{ sent_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-error/10 rounded-xl flex items-center justify-center">
+                        {% icon "alert-circle-outline" css_class="text-xl text-error" %}
+                    </div>
+                    <div>
+                        <div class="text-sm text-muted">{% trans "Errors" %}</div>
+                        <div class="text-2xl font-semibold">{{ error_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <!-- Eligible Invoices -->
+        <div class="card">
+            <div class="card-body p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                        {% icon "document-text-outline" css_class="text-2xl text-primary" %}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm text-muted">{% trans "Invoices Ready for E-Invoice" %}</div>
+                        <div class="text-3xl font-bold">{{ eligible_count }}</div>
+                    </div>
+                    {% if eligible_count > 0 %}
+                    <a hx-get="{% url 'facturae_b2b:generate_select' %}"
+                       hx-target="#main-content-area"
+                       hx-push-url="true"
+                       class="btn color-primary btn-sm">
+                        {% icon "add-outline" %} {% trans "Generate" %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Certificate Status -->
+        <div class="card">
+            <div class="card-body p-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center {% if has_certificate and certificate_valid %}bg-success/10{% elif has_certificate %}bg-warning/10{% else %}bg-base-200{% endif %}">
+                        {% icon "key-outline" css_class="text-2xl" %}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm text-muted">{% trans "Digital Certificate" %}</div>
+                        {% if has_certificate and certificate_valid %}
+                        <span class="badge color-success">{% trans "Valid" %}</span>
+                        {% elif has_certificate %}
+                        <span class="badge color-warning">{% trans "Expired" %}</span>
+                        {% else %}
+                        <span class="badge">{% trans "Not configured" %}</span>
+                        {% endif %}
+                    </div>
+                    <a hx-get="{% url 'facturae_b2b:settings' %}"
+                       hx-target="#main-content-area"
+                       hx-push-url="true"
+                       class="btn btn-ghost btn-sm">
+                        {% icon "settings-outline" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent E-Invoices -->
+    <div class="card">
+        <div class="card-header">
+            <div class="flex justify-between items-center">
+                <h2 class="card-title">{% trans "Recent E-Invoices" %}</h2>
+                <a hx-get="{% url 'facturae_b2b:einvoices' %}"
+                   hx-target="#main-content-area"
+                   hx-push-url="true"
+                   class="btn btn-ghost btn-sm">
+                    {% trans "View all" %} {% icon "arrow-forward-outline" %}
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if recent_einvoices %}
+            <div class="space-y-2">
+                {% for ei in recent_einvoices %}
+                <a hx-get="{% url 'facturae_b2b:einvoice_detail' ei.pk %}"
+                   hx-target="#main-content-area"
+                   hx-push-url="true"
+                   class="flex items-center justify-between p-3 rounded-lg bg-base-100 hover:bg-base-200 transition-colors cursor-pointer no-underline text-base-content">
+                    <div>
+                        <div class="font-medium">{{ ei.invoice.number }}</div>
+                        <div class="text-xs text-muted">
+                            {{ ei.invoice.customer_name }} &middot; {{ ei.created_at|date:"d/m/Y H:i" }}
+                        </div>
+                    </div>
+                    <span class="badge {% if ei.status == 'generated' %}color-primary{% elif ei.status == 'signed' %}color-success{% elif ei.status == 'sent' %}color-warning{% elif ei.status == 'accepted' %}color-success{% elif ei.status == 'rejected' or ei.status == 'error' %}color-error{% endif %}">
+                        {{ ei.get_status_display }}
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-muted">
+                {% icon "code-slash-outline" css_class="text-5xl block mx-auto mb-2" %}
+                <p class="mt-2">{% trans "No e-invoices yet" %}</p>
+                {% if eligible_count > 0 %}
+                <a hx-get="{% url 'facturae_b2b:generate_select' %}"
+                   hx-target="#main-content-area"
+                   hx-push-url="true"
+                   class="btn color-primary btn-sm mt-3">
+                    {% trans "Generate first e-invoice" %}
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

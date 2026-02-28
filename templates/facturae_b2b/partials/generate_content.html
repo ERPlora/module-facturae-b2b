@@ -1,0 +1,129 @@
+{% load djicons i18n %}
+
+{% url 'facturae_b2b:generate_from_invoice' '00000000-0000-0000-0000-000000000000' as gen_url %}
+{% url 'facturae_b2b:einvoice_detail' '00000000-0000-0000-0000-000000000000' as detail_url %}
+{% url 'facturae_b2b:generate_bulk' as bulk_url %}
+{% url 'facturae_b2b:einvoices' as einvoices_url %}
+{% url 'facturae_b2b:generate_select' as generate_url %}
+
+<div hidden data-back-url="{{ einvoices_url }}"></div>
+
+<div x-data="{
+    selectedIds: [],
+    selectAll: false,
+    generating: false,
+    bulkGenerating: false,
+    generateUrl: '{{ gen_url }}',
+    detailUrl: '{{ detail_url }}',
+    placeholder: '00000000-0000-0000-0000-000000000000',
+    csrfToken: '{{ csrf_token }}',
+    toggleSelect(id) {
+        const idx = this.selectedIds.indexOf(id);
+        if (idx > -1) this.selectedIds.splice(idx, 1);
+        else this.selectedIds.push(id);
+        this.selectAll = false;
+    },
+    toggleAll(ids) {
+        if (this.selectAll) this.selectedIds = [];
+        else this.selectedIds = [...ids];
+        this.selectAll = !this.selectAll;
+    },
+    clearSelection() { this.selectedIds = []; this.selectAll = false; },
+    generateSingle(invoicePk) {
+        this.generating = true;
+        fetch(this.generateUrl.replace(this.placeholder, invoicePk), {
+            method: 'POST',
+            headers: {'X-CSRFToken': this.csrfToken}
+        }).then(r => r.json()).then(d => {
+            this.generating = false;
+            if (d.ok) {
+                htmx.ajax('GET', this.detailUrl.replace(this.placeholder, d.id), '#main-content-area');
+            } else {
+                alert(d.error || 'Generation failed');
+            }
+        }).catch(() => { this.generating = false; alert('Generation failed'); });
+    },
+    generateBulk() {
+        if (this.selectedIds.length === 0) return;
+        this.bulkGenerating = true;
+        const formData = new FormData();
+        formData.append('ids', this.selectedIds.join(','));
+        fetch('{{ bulk_url }}', {
+            method: 'POST',
+            headers: {'X-CSRFToken': this.csrfToken},
+            body: formData
+        }).then(r => r.json()).then(d => {
+            this.bulkGenerating = false;
+            if (d.ok) {
+                htmx.ajax('GET', '{{ einvoices_url }}', '#main-content-area');
+            } else {
+                alert(d.error || 'Bulk generation failed');
+            }
+        }).catch(() => { this.bulkGenerating = false; alert('Bulk generation failed'); });
+    }
+}">
+
+    <div class="datatable glass mt-5" id="generate-datatable">
+
+        <!-- Toolbar -->
+        <div class="datatable-toolbar">
+            <div class="datatable-toolbar-start">
+                <label class="input input-sm datatable-search">
+                    {% icon "search-outline" %}
+                    <input type="search"
+                           name="q"
+                           placeholder="{% trans 'Search invoices...' %}"
+                           value="{{ search|default:'' }}"
+                           autocomplete="off"
+                           hx-get="{{ generate_url }}"
+                           hx-target="#datatable-body"
+                           hx-include="#generate-datatable"
+                           hx-trigger="input changed delay:300ms, search">
+                </label>
+                <select name="status"
+                        class="select select-sm"
+                        hx-get="{{ generate_url }}"
+                        hx-target="#datatable-body"
+                        hx-include="#generate-datatable"
+                        hx-trigger="change">
+                    <option value="">{% trans "All Statuses" %}</option>
+                    <option value="issued" {% if status_filter == 'issued' %}selected{% endif %}>{% trans "Issued" %}</option>
+                    <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>{% trans "Paid" %}</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div class="datatable-bulk" x-show="selectedIds.length > 0" x-cloak>
+            <div class="datatable-bulk-info">
+                <span class="datatable-bulk-count" x-text="selectedIds.length"></span>
+                <span>{% trans "selected" %}</span>
+            </div>
+            <div class="datatable-bulk-actions">
+                <button class="datatable-bulk-btn"
+                        :disabled="bulkGenerating"
+                        @click="generateBulk()">
+                    <template x-if="bulkGenerating"><span class="loading loading-sm"></span></template>
+                    <template x-if="!bulkGenerating">{% icon "flash-outline" %}</template>
+                    {% trans "Generate Selected" %}
+                </button>
+                <button class="datatable-bulk-clear" @click="clearSelection()" title="{% trans 'Clear selection' %}">
+                    {% icon "close-outline" %}
+                </button>
+            </div>
+        </div>
+
+        {% csrf_token %}
+
+        <!-- Hidden state inputs -->
+        <input type="hidden" name="sort" value="{{ sort_field|default:'date' }}">
+        <input type="hidden" name="dir" value="{{ sort_dir|default:'desc' }}">
+        <input type="hidden" name="per_page" value="{{ per_page|default:'25' }}">
+
+        <!-- Datatable Body (HTMX swap target) -->
+        <div id="datatable-body">
+            {% include "facturae_b2b/partials/generate_table.html" %}
+        </div>
+    </div>
+
+</div>

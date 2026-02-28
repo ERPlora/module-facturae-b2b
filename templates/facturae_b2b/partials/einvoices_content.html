@@ -1,0 +1,172 @@
+{% load djicons i18n %}
+
+<div x-data="{
+    view: '{{ current_view|default:'table' }}',
+    selectedIds: [],
+    selectAll: false,
+    deleteConfirm: false,
+    deleteTarget: null,
+    toggleSelect(id) {
+        const idx = this.selectedIds.indexOf(id);
+        if (idx > -1) this.selectedIds.splice(idx, 1);
+        else this.selectedIds.push(id);
+        this.selectAll = false;
+    },
+    toggleAll(ids) {
+        if (this.selectAll) this.selectedIds = [];
+        else this.selectedIds = [...ids];
+        this.selectAll = !this.selectAll;
+    },
+    clearSelection() { this.selectedIds = []; this.selectAll = false; },
+    confirmDelete() {
+        if (!this.deleteTarget) return;
+        fetch(this.deleteTarget.url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}' }
+        }).then(r => r.json()).then(d => {
+            if (d.ok) htmx.ajax('GET', '{% url 'facturae_b2b:einvoices' %}', { target: '#datatable-body', source: '#einvoices-datatable' });
+        });
+        this.deleteConfirm = false;
+        this.deleteTarget = null;
+    }
+}">
+
+    <div class="datatable glass mt-5" id="einvoices-datatable">
+
+        <!-- Toolbar -->
+        <div class="datatable-toolbar">
+            <div class="datatable-toolbar-start">
+                <label class="input input-sm datatable-search">
+                    {% icon "search-outline" %}
+                    <input type="search"
+                           name="q"
+                           placeholder="{% trans 'Search e-invoices...' %}"
+                           value="{{ search|default:'' }}"
+                           autocomplete="off"
+                           hx-get="{% url 'facturae_b2b:einvoices' %}"
+                           hx-target="#datatable-body"
+                           hx-include="#einvoices-datatable"
+                           hx-trigger="input changed delay:300ms, search">
+                </label>
+                <select name="status"
+                        class="select select-sm"
+                        hx-get="{% url 'facturae_b2b:einvoices' %}"
+                        hx-target="#datatable-body"
+                        hx-include="#einvoices-datatable"
+                        hx-trigger="change">
+                    <option value="">{% trans "All Statuses" %}</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="datatable-toolbar-end">
+                <a hx-get="{% url 'facturae_b2b:generate_select' %}"
+                   hx-target="#main-content-area"
+                   hx-push-url="true"
+                   class="btn btn-sm btn-circle color-primary"
+                   title="{% trans 'Generate E-Invoice' %}">
+                    {% icon "add-outline" %}
+                </a>
+
+                <!-- View Toggle -->
+                <div class="datatable-view-toggle">
+                    <button type="button"
+                            class="datatable-view-btn"
+                            :class="{ 'datatable-view-btn-active': view === 'table' }"
+                            @click="view = 'table'"
+                            hx-get="{% url 'facturae_b2b:einvoices' %}"
+                            hx-target="#datatable-body"
+                            hx-include="#einvoices-datatable"
+                            hx-vals='{"view": "table"}'
+                            title="{% trans 'Table view' %}">
+                        {% icon "list-outline" %}
+                    </button>
+                    <button type="button"
+                            class="datatable-view-btn"
+                            :class="{ 'datatable-view-btn-active': view === 'cards' }"
+                            @click="view = 'cards'"
+                            hx-get="{% url 'facturae_b2b:einvoices' %}"
+                            hx-target="#datatable-body"
+                            hx-include="#einvoices-datatable"
+                            hx-vals='{"view": "cards"}'
+                            title="{% trans 'Card view' %}">
+                        {% icon "grid-outline" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div class="datatable-bulk" x-show="selectedIds.length > 0" x-cloak>
+            <div class="datatable-bulk-info">
+                <span class="datatable-bulk-count" x-text="selectedIds.length"></span>
+                <span>{% trans "selected" %}</span>
+            </div>
+            <div class="datatable-bulk-actions">
+                <button class="datatable-bulk-btn"
+                        hx-post="{% url 'facturae_b2b:einvoices_bulk_action' %}"
+                        hx-target="#datatable-body"
+                        hx-include="#einvoices-datatable"
+                        :hx-vals="JSON.stringify({ids: selectedIds.join(','), action: 'sign'})"
+                        @htmx:after-request="clearSelection()">
+                    {% icon "shield-checkmark-outline" %}
+                    {% trans "Sign" %}
+                </button>
+                <button class="datatable-bulk-btn datatable-bulk-btn-danger"
+                        hx-post="{% url 'facturae_b2b:einvoices_bulk_action' %}"
+                        hx-target="#datatable-body"
+                        hx-include="#einvoices-datatable"
+                        :hx-vals="JSON.stringify({ids: selectedIds.join(','), action: 'delete'})"
+                        @htmx:after-request="clearSelection()">
+                    {% icon "trash-outline" %}
+                    {% trans "Delete" %}
+                </button>
+                <button class="datatable-bulk-clear" @click="clearSelection()" title="{% trans 'Clear selection' %}">
+                    {% icon "close-outline" %}
+                </button>
+            </div>
+        </div>
+
+        {% csrf_token %}
+
+        <!-- Hidden state inputs -->
+        <input type="hidden" name="sort" value="{{ sort_field|default:'created' }}">
+        <input type="hidden" name="dir" value="{{ sort_dir|default:'desc' }}">
+        <input type="hidden" name="view" :value="view">
+        <input type="hidden" name="per_page" value="{{ per_page|default:'10' }}">
+
+        <!-- Datatable Body (HTMX swap target) -->
+        <div id="datatable-body">
+            {% include "facturae_b2b/partials/einvoices_table.html" %}
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-backdrop" :data-state="deleteConfirm ? 'open' : 'closed'" @click.self="deleteConfirm = false; deleteTarget = null">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">{% trans "Delete E-Invoice" %}</h3>
+                <button class="modal-close" @click="deleteConfirm = false; deleteTarget = null">
+                    {% icon "close-outline" %}
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-sm text-base-content/70">
+                    {% trans "Are you sure you want to delete" %} <strong x-text="deleteTarget?.name"></strong>?
+                    {% trans "This action cannot be undone." %}
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost btn-sm" @click="deleteConfirm = false; deleteTarget = null">
+                    {% trans "Cancel" %}
+                </button>
+                <button class="btn btn-sm color-error" @click="confirmDelete()">
+                    {% icon "trash-outline" %}
+                    {% trans "Delete" %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
