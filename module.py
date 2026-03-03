@@ -29,3 +29,16 @@ PERMISSIONS = [
     'facturae_b2b.send_einvoice',
     'facturae_b2b.manage_settings',
 ]
+
+ROLE_PERMISSIONS = {
+    "admin": ["*"],
+    "manager": [
+        "generate_einvoice",
+        "send_einvoice",
+        "sign_einvoice",
+        "view_einvoice",
+    ],
+    "employee": [
+        "view_einvoice",
+    ],
+}
