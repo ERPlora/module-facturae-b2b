@@ -41,8 +41,7 @@
             } else {
                 alert(d.error || 'Generation failed');
             }
-        }).catch(() => { this.generating = false; alert('Generation failed'); });
-    },
+        }).catch(() => { this.generating = false; alert('Generation failed'); },
     generateBulk() {
         if (this.selectedIds.length === 0) return;
         this.bulkGenerating = true;
@@ -59,7 +58,7 @@
             } else {
                 alert(d.error || 'Bulk generation failed');
             }
-        }).catch(() => { this.bulkGenerating = false; alert('Bulk generation failed'); });
+        }).catch(() => { this.bulkGenerating = false; alert('Bulk generation failed'); },
     }
 }">
 

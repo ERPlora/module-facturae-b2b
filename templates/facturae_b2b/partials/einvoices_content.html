@@ -24,7 +24,7 @@
             method: 'POST',
             headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}' }
         }).then(r => r.json()).then(d => {
-            if (d.ok) htmx.ajax('GET', '{% url 'facturae_b2b:einvoices' %}', { target: '#datatable-body', source: '#einvoices-datatable' });
+            if (d.ok) htmx.ajax('GET', '{% url 'facturae_b2b:einvoices' %}', { target: '#datatable-body', source: '#einvoices-datatable' },
         });
         this.deleteConfirm = false;
         this.deleteTarget = null;

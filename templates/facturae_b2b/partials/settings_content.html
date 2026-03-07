@@ -23,8 +23,7 @@
             } else {
                 alert(d.error || JSON.stringify(d.errors) || 'Upload failed');
             }
-        }).catch(() => { this.uploading = false; alert('Upload failed'); });
-    },
+        }).catch(() => { this.uploading = false; alert('Upload failed'); },
     removeCertificate() {
         if (!confirm('{% trans 'Remove the digital certificate?' %}')) return;
         this.removing = true;
@@ -38,7 +37,7 @@
             } else {
                 alert(d.error || 'Remove failed');
             }
-        }).catch(() => { this.removing = false; alert('Remove failed'); });
+        }).catch(() => { this.removing = false; alert('Remove failed'); },
     }
 }">
     <!-- Company Information -->

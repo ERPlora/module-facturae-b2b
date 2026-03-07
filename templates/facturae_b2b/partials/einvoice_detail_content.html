@@ -28,8 +28,7 @@
             } else {
                 alert(d.error || 'Signing failed');
             }
-        }).catch(() => { this.signing = false; alert('Signing failed'); });
-    },
+        }).catch(() => { this.signing = false; alert('Signing failed'); },
     regenerateEInvoice() {
         if (!confirm('{% trans 'Regenerate XML? Current XML will be overwritten.' %}')) return;
         this.regenerating = true;
@@ -43,8 +42,7 @@
             } else {
                 alert(d.error || 'Regeneration failed');
             }
-        }).catch(() => { this.regenerating = false; alert('Regeneration failed'); });
-    },
+        }).catch(() => { this.regenerating = false; alert('Regeneration failed'); },
     deleteEInvoice() {
         if (!confirm('{% trans 'Delete this e-invoice?' %}')) return;
         this.deleting = true;
@@ -58,7 +56,7 @@
             } else {
                 alert(d.error || 'Deletion failed');
             }
-        }).catch(() => { this.deleting = false; alert('Deletion failed'); });
+        }).catch(() => { this.deleting = false; alert('Deletion failed'); },
     }
 }">
     {% if error %}
