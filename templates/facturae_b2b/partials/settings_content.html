@@ -177,7 +177,11 @@
             <!-- Current certificate info -->
             <div class="flex items-center gap-4 p-4 rounded-xl bg-base-200 mb-4">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center {% if settings.certificate_valid %}bg-success/10{% else %}bg-warning/10{% endif %}">
-                    {% icon "shield-checkmark-outline" css_class="text-xl {% if settings.certificate_valid %}text-success{% else %}text-warning{% endif %}" %}
+                    {% if settings.certificate_valid %}
+                    {% icon "shield-checkmark-outline" css_class="text-xl text-success" %}
+                    {% else %}
+                    {% icon "shield-checkmark-outline" css_class="text-xl text-warning" %}
+                    {% endif %}
                 </div>
                 <div class="flex-1">
                     <div class="font-medium text-sm">{{ settings.certificate_subject }}</div>
