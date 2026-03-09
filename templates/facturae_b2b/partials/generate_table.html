@@ -8,7 +8,7 @@
         <thead class="datatable-thead">
             <tr>
                 <th class="datatable-th datatable-th-checkbox">
-                    <label class="checkbox checkbox-sm">
+                    <label class="checkbox-input">
                         <input type="checkbox"
                                :checked="selectAll"
                                @click="toggleAll([{% for inv in invoices %}'{{ inv.pk }}'{% if not forloop.last %},{% endif %}{% endfor %}])">
@@ -64,7 +64,7 @@
                 data-id="{{ inv.pk }}"
                 :class="{ 'datatable-tr-selected': selectedIds.includes('{{ inv.pk }}') }">
                 <td class="datatable-td datatable-td-checkbox" onclick="event.stopPropagation();">
-                    <label class="checkbox checkbox-sm">
+                    <label class="checkbox-input">
                         <input type="checkbox"
                                :checked="selectedIds.includes('{{ inv.pk }}')"
                                @click="toggleSelect('{{ inv.pk }}')">
