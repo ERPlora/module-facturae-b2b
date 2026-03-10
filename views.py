@@ -115,7 +115,7 @@ def _einvoices_ctx(request):
 
     per_page = int(params.get('per_page', 10))
     if per_page not in (10, 25, 50, 100):
-        per_page = 10
+        per_page = 12
     page_obj = Paginator(qs, per_page).get_page(params.get('page', 1))
 
     current_view = params.get('view', 'table')
