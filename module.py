@@ -7,6 +7,7 @@ MODULE_ICON = 'code-slash-outline'
 MODULE_DESCRIPTION = _('EN 16931 compliant electronic invoicing in UBL 2.1 format')
 MODULE_AUTHOR = 'ERPlora'
 MODULE_CATEGORY = 'compliance'
+HAS_MODELS = True
 
 MENU = {
     'label': _('Factura-e B2B'),
